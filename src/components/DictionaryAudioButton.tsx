@@ -1,6 +1,7 @@
 import React from 'react';
-import { Pressable, Text, View, ActivityIndicator } from 'react-native';
-import { LucideVolume2, LucideVolumeX, LucidePause, LucidePlay } from 'lucide-react-native';
+import { View, ActivityIndicator } from 'react-native';
+import { LucideVolume2, LucideVolumeX, LucidePause } from 'lucide-react-native';
+import { AnimatedButton } from './AnimatedButton';
 
 interface DictionaryAudioButtonProps {
   onPress: () => void;
@@ -26,15 +27,11 @@ export function DictionaryAudioButton({
   }
 
   return (
-    <Pressable
+    <AnimatedButton
       onPress={onPress}
-      style={({ pressed }) => ({
-        padding: 8,
-        borderRadius: 20,
-        backgroundColor: isPlaying ? `${color}20` : pressed ? '#F0F0F0' : 'transparent',
-        alignItems: 'center',
-        justifyContent: 'center',
-      })}
+      className={`p-2 rounded-full items-center justify-center ${
+        isPlaying ? 'bg-primary/10' : 'bg-transparent'
+      }`}
     >
       {isLoading ? (
         <ActivityIndicator size="small" color={color} />
@@ -43,6 +40,6 @@ export function DictionaryAudioButton({
       ) : (
         <LucideVolume2 size={20} color={color} />
       )}
-    </Pressable>
+    </AnimatedButton>
   );
 }
