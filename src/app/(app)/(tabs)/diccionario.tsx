@@ -3,8 +3,10 @@ import { ActivityIndicator, FlatList, Text, TextInput, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { useAudioPlayer } from 'expo-audio';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { supabase } from '@/client/supabase';
 import { DictionaryAudioButton } from '@/components/DictionaryAudioButton';
+import { Search, SearchX } from 'lucide-react-native';
 
 interface Word {
   id: string;
@@ -97,84 +99,72 @@ export default function DiccionarioScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#F9F6F0', alignItems: 'center', justifyContent: 'center' }}>
+      <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950 items-center justify-center">
         <ActivityIndicator size="large" color="#1B5E20" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F9F6F0' }} edges={['top']}>
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950" edges={['top']}>
       {/* Header */}
-      <View style={{ backgroundColor: '#1B5E20', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20 }}>
-        <Text style={{ color: '#F59E0B', fontSize: 11, fontWeight: '700' }}>KARIÑA · REFERENCIA</Text>
-        <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', marginTop: 4 }}>Diccionario</Text>
-        <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 4 }}>{words.length} palabras registradas</Text>
+      <View className="bg-primary dark:bg-slate-900 px-6 pt-4 pb-6 rounded-b-[40px] shadow-lg">
+        <Text className="text-accent font-bold text-xs tracking-widest uppercase">Kariña · Referencia</Text>
+        <Text className="text-white text-3xl font-black mt-1">Diccionario</Text>
+        <Text className="text-white/70 text-sm mt-1">{words.length} palabras registradas</Text>
       </View>
 
       {/* Buscador */}
-      <View style={{ paddingHorizontal: 20, paddingVertical: 14 }}>
-        <TextInput
-          value={search}
-          onChangeText={handleSearch}
-          placeholder="Buscar palabra en Kariña o español..."
-          placeholderTextColor="#888"
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: 12,
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            fontSize: 14,
-            borderWidth: 1,
-            borderColor: '#E2E8F0',
-            color: '#1A2E1A',
-          }}
-        />
+      <View className="px-6 py-5">
+        <View className="flex-row items-center bg-white dark:bg-slate-800 rounded-full px-5 py-3 shadow-sm border border-slate-100 dark:border-slate-700">
+          <Search size={20} color={search ? '#1B5E20' : '#94A3B8'} />
+          <TextInput
+            value={search}
+            onChangeText={handleSearch}
+            placeholder="Buscar palabra..."
+            placeholderTextColor="#94A3B8"
+            className="flex-1 ml-3 text-slate-900 dark:text-slate-100 text-base"
+          />
+        </View>
       </View>
 
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-            <Text style={{ fontSize: 32 }}>🔍</Text>
-            <Text style={{ fontSize: 14, color: '#888', marginTop: 8 }}>No se encontraron palabras</Text>
+          <View className="items-center py-12">
+            <SearchX size={48} color="#94A3B8" />
+            <Text className="text-slate-400 dark:text-slate-500 mt-4 text-base font-medium">No se encontraron palabras</Text>
           </View>
         }
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const hasAudio = !!AUDIO_FILES[item.palabra_karina.toLowerCase()];
           const isPlaying = playingId === item.id;
-          const color = item.modules?.[0]?.color || '#1B5E20';
+          const moduleColor = item.modules?.[0]?.color || '#1B5E20';
 
           return (
-            <View
-              style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: 14,
-                padding: 14,
-                marginBottom: 10,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-                borderWidth: 1,
-                borderColor: '#F0EDE8',
-              }}
+            <Animated.View
+              entering={FadeInDown.delay(index * 100).springify()}
+              className="bg-white dark:bg-slate-800 rounded-3xl p-5 mb-4 flex-row items-center shadow-md shadow-slate-200 dark:shadow-none border border-slate-50 dark:border-slate-700"
             >
               <View
-                style={{
-                  width: 8,
-                  height: 40,
-                  borderRadius: 4,
-                  backgroundColor: color,
-                }}
+                className="w-1.5 h-12 rounded-full mr-4"
+                style={{ backgroundColor: moduleColor }}
               />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: '800', color: '#1A2E1A' }}>{item.palabra_karina}</Text>
-                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>{item.traduccion_espanol}</Text>
-                {item.modules && item.modules[0] && (
-                  <Text style={{ fontSize: 10, color: color, fontWeight: '600', marginTop: 4 }}>
+              <View className="flex-1">
+                <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-50">
+                  {item.palabra_karina}
+                </Text>
+                <Text className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                  {item.traduccion_espanol}
+                </Text>
+                {item.modules?.[0] && (
+                  <Text
+                    className="text-[10px] font-bold uppercase tracking-wider mt-1.5"
+                    style={{ color: moduleColor }}
+                  >
                     {item.modules[0].titulo_espanol}
                   </Text>
                 )}
@@ -183,9 +173,9 @@ export default function DiccionarioScreen() {
                 hasAudio={hasAudio}
                 isPlaying={isPlaying}
                 onPress={() => handlePlayAudio(item)}
-                color={color}
+                color={moduleColor}
               />
-            </View>
+            </Animated.View>
           );
         }}
       />
