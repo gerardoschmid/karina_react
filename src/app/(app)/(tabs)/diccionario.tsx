@@ -1,8 +1,10 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import { useCallback, useState, useEffect } from 'react';
+import { ActivityIndicator, FlatList, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
+import { useAudioPlayer } from 'expo-audio';
 import { supabase } from '@/client/supabase';
+import { DictionaryAudioButton } from '@/components/DictionaryAudioButton';
 
 interface Word {
   id: string;
@@ -11,17 +13,36 @@ interface Word {
   modules: { titulo_espanol: string; color: string }[] | null;
 }
 
+const AUDIO_FILES: Record<string, any> = {
+  aau: require('../../../../assets/sounds/aau.mp3'),
+  mojko: require('../../../../assets/sounds/mojko.mp3'),
+  nana: require('../../../../assets/sounds/nana.mp3'),
+  nakon: require('../../../../assets/sounds/nakon.mp3'),
+};
+
 export default function DiccionarioScreen() {
   const [words, setWords] = useState<Word[]>([]);
   const [filtered, setFiltered] = useState<Word[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
+  const player = useAudioPlayer(null);
 
   useFocusEffect(
     useCallback(() => {
       loadWords();
     }, [])
   );
+
+  useEffect(() => {
+    const subscription = player.addListener('playbackStatusUpdate', (status) => {
+      if (!status.playing && status.currentTime >= status.duration && status.duration > 0) {
+        setPlayingId(null);
+      }
+    });
+    return () => subscription.remove();
+  }, [player]);
 
   async function loadWords() {
     setLoading(true);
@@ -36,6 +57,26 @@ export default function DiccionarioScreen() {
       setFiltered(typed);
     }
     setLoading(false);
+  }
+
+  async function handlePlayAudio(word: Word) {
+    const audioSource = AUDIO_FILES[word.palabra_karina.toLowerCase()];
+    if (!audioSource) return;
+
+    if (playingId === word.id) {
+      player.pause();
+      setPlayingId(null);
+      return;
+    }
+
+    try {
+      setPlayingId(word.id);
+      await player.replace(audioSource);
+      player.play();
+    } catch (error) {
+      console.error('Error al reproducir audio:', error);
+      setPlayingId(null);
+    }
   }
 
   function handleSearch(text: string) {
@@ -102,39 +143,51 @@ export default function DiccionarioScreen() {
             <Text style={{ fontSize: 14, color: '#888', marginTop: 8 }}>No se encontraron palabras</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: 14,
-              padding: 14,
-              marginBottom: 10,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 12,
-              borderWidth: 1,
-              borderColor: '#F0EDE8',
-            }}
-          >
+        renderItem={({ item }) => {
+          const hasAudio = !!AUDIO_FILES[item.palabra_karina.toLowerCase()];
+          const isPlaying = playingId === item.id;
+          const color = item.modules?.[0]?.color || '#1B5E20';
+
+          return (
             <View
               style={{
-                width: 8,
-                height: 40,
-                borderRadius: 4,
-                backgroundColor: item.modules?.[0]?.color || '#1B5E20',
+                backgroundColor: '#FFFFFF',
+                borderRadius: 14,
+                padding: 14,
+                marginBottom: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                borderWidth: 1,
+                borderColor: '#F0EDE8',
               }}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '800', color: '#1A2E1A' }}>{item.palabra_karina}</Text>
-              <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>{item.traduccion_espanol}</Text>
-              {item.modules && item.modules[0] && (
-                <Text style={{ fontSize: 10, color: item.modules[0].color, fontWeight: '600', marginTop: 4 }}>
-                  {item.modules[0].titulo_espanol}
-                </Text>
-              )}
+            >
+              <View
+                style={{
+                  width: 8,
+                  height: 40,
+                  borderRadius: 4,
+                  backgroundColor: color,
+                }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#1A2E1A' }}>{item.palabra_karina}</Text>
+                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>{item.traduccion_espanol}</Text>
+                {item.modules && item.modules[0] && (
+                  <Text style={{ fontSize: 10, color: color, fontWeight: '600', marginTop: 4 }}>
+                    {item.modules[0].titulo_espanol}
+                  </Text>
+                )}
+              </View>
+              <DictionaryAudioButton
+                hasAudio={hasAudio}
+                isPlaying={isPlaying}
+                onPress={() => handlePlayAudio(item)}
+                color={color}
+              />
             </View>
-          </View>
-        )}
+          );
+        }}
       />
     </SafeAreaView>
   );
